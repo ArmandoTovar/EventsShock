@@ -3,7 +3,7 @@ import path from 'path';
 
 dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
 
-export const APOLLO_PORT = process.env.APOLLO_PORT || 4000;
+export const APOLLO_PORT = process.env.PORT || 4000;
 
 export const API_PORT = process.env.API_PORT || 5000;
 
