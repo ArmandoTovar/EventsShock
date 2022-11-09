@@ -1,0 +1,50 @@
+{
+  "name": "evaproyectserver",
+  "version": "0.0.1",
+  "description": "proyect contrate",
+  "main": "index.js",
+  "scripts": {
+    "start:dev": "nodemon -r esm ./src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "lint-staged": {
+    "*.{js,json,css,md}": "prettier --write"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@koa/cors": "^4.0.0",
+    "apollo-server": "^3.10.3",
+    "apollo-server-core": "^3.10.3",
+    "axios": "^0.24.0",
+    "bcrypt": "^5.1.0",
+    "body-parser": "^1.20.1",
+    "dataloader": "^2.0.0",
+    "date-fns": "^2.29.3",
+    "dotenv": "^16.0.3",
+    "es6-error": "^4.1.1",
+    "esm": "^3.2.25",
+    "firebase": "^9.12.1",
+    "graphql": "^16.6.0",
+    "html-pdf-node": "^1.0.8",
+    "jsonwebtoken": "^8.5.1",
+    "koa": "^2.13.4",
+    "koa-body": "^6.0.1",
+    "koa-morgan": "^1.0.1",
+    "koa-router": "^12.0.0",
+    "koa-static": "^5.0.0",
+    "lodash": "^4.17.21",
+    "lru-cache": "^7.14.0",
+    "msnodesqlv8": "^2.6.0",
+    "mssql": "^9.0.1",
+    "objection": "^3.0.1",
+    "through2": "^4.0.2",
+    "uuid": "^9.0.0",
+    "winston": "^3.8.2",
+    "yup": "^0.32.11"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20",
+    "prettier": "^2.7.1"
+  }
+}

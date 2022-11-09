@@ -1,61 +1,128 @@
-import { gql, UserInputError } from 'apollo-server';
+import {
+  ApolloError,
+  gql,
+  ForbiddenError,
+  UserInputError,
+} from 'apollo-server';
 import * as yup from 'yup';
-
-import { editData, findData } from '../../firebase';
-
+import User from '../../models/User';
+import { merge } from 'lodash';
+import Detail from '../../models/Detail';
+import { v4 as uuid } from 'uuid';
+import Event from '../../models/Event';
 export const typeDefs = gql`
   input EditUserInput {
-    church: String
-    country: String
-    distrite: String
-    fullName: String
-    mentorType: String
-    phone: String
-    range: String
+    email: String
+    password: String
+    firstName: String
+    lastName: String
+    birthdate: DateTime
+    events: [String]
+    state: Boolean
+    rol: Int
   }
 
   extend type Mutation {
-    editUser(user: EditUserInput): User
+    editUser(id: ID!, user: EditUserInput): User
   }
 `;
 
+class EmailTakenError extends ApolloError {
+  constructor(message, properties) {
+    super(message, 'EMAIL_TAKEN', properties);
+  }
+
+  static fromEmail(email) {
+    return new EmailTakenError(
+      `Email ${email} is already taken. Choose another Email`,
+      { email },
+    );
+  }
+}
+
 const argsSchema = yup.object().shape({
   user: yup.object().shape({
-    fullName: yup.string().optional().min(3).max(30),
-    church: yup.string().optional().min(3).max(30),
-    country: yup.string().optional().min(3).max(30),
-    distrite: yup.string().optional().min(3).max(30),
-    mentorType: yup.string().optional().min(3).max(30),
-    phone: yup.string().optional().min(3).max(30),
-    range: yup.string().optional().min(3).max(30),
+    email: yup
+      .string('You entered an invalid email address')
+      .email()
+      .min(1)
+      .max(30)
+      .lowercase()
+      .trim(),
+    password: yup
+      .string()
+      .optional()
+      .matches(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*])(?=.{8,})/,
+        'Must Contain 8 Characters, One Uppercase, One Lowercase, One Number and One Special Case Character',
+      ),
+    firstName: yup.string().min(1).max(30).optional('First Name is required. '),
+    lastName: yup.string().min(1).max(30).optional('Last Name is required. '),
   }),
 });
 
 export const resolvers = {
   Mutation: {
     editUser: async (obj, args, { authService }) => {
+      const {
+        user: { password, email, state, events, ...user },
+      } = await argsSchema.validate(args);
       const currentUser = await authService.getUserOrFail();
 
-      const { user } = await argsSchema.validate(args, {
-        stripUnknown: true,
-      });
+      const targetUser = await User.query().findById(args.id);
+      if (currentUser.rol != 1 && targetUser.id !== currentUser.id) {
+        throw new ForbiddenError('User is not authorized to edit');
+      }
+      if (state !== undefined) {
+        if (currentUser.rol != 1) throw new ForbiddenError('only ADM');
+        merge(user, { state });
+      }
 
-      const oldUser = await findData('user', 'id', '==', currentUser.id);
+      if (password) {
+        const passwordHash = await createPasswordHash(password);
+        merge(user, { password: passwordHash });
+      }
+      if (email) {
+        const existingUser = await User.query().findOne({
+          email,
+        });
 
-      if (!oldUser[0]) {
-        throw new UserInputError(
-          `DataUser with id ${currentUser.id} does not exist`,
+        if (existingUser) {
+          throw EmailTakenError.fromEmail(email);
+        }
+        user.merge(user, { email });
+      }
+      if (events) {
+        if (events.length === 0) {
+          await Detail.query().where('idUser', '=', args.id).delete();
+
+          return null;
+        }
+        const existingEvent = await Event.query().findByIds(events);
+
+        if (events.length != existingEvent.length) {
+          throw new UserInputError('event type does not exist');
+        }
+        await Detail.query().where('idUser', '=', args.id).delete();
+
+        const newDetail = await Detail.query().insertAndFetch(
+          events.map((e) => {
+            return { idEvent: e, idUser: args.id, id: uuid() };
+          }),
         );
+        if (!newDetail[0].id) {
+          throw DbSaveError.SaveError('save error');
+        }
       }
 
-      await editData(currentUser.id, 'user', user);
-
-      const result = await findData('user', 'id', '==', currentUser.id);
-      if (!result[0]) {
-        throw new UserInputError('sync error');
+      if (user !== {}) {
+        const updateUser = await targetUser.$query().patchAndFetch({
+          ...user,
+        });
+        return updateUser;
+      } else {
+        return targetUser;
       }
-
-      return result[0];
     },
   },
 };

@@ -1,11 +1,12 @@
 import { gql, UserInputError } from 'apollo-server';
 import * as yup from 'yup';
 import bcrypt from 'bcrypt';
-import { auth, findData } from '../../firebase';
+
+import User from '../../models/User';
 
 export const typeDefs = gql`
   input AuthenticateInput {
-    username: String!
+    email: String!
     password: String!
   }
 
@@ -16,16 +17,13 @@ export const typeDefs = gql`
   }
 
   extend type Mutation {
-    """
-    Generates a new access token, if provided credentials (username and password) match any registered user.
-    """
     authenticate(credentials: AuthenticateInput): AuthenticatePayload
   }
 `;
 
 const argsSchema = yup.object().shape({
   credentials: yup.object().shape({
-    username: yup.string().required().lowercase().trim(),
+    email: yup.string().required().lowercase().trim(),
     password: yup.string().required().trim(),
   }),
 });
@@ -34,31 +32,27 @@ export const resolvers = {
   Mutation: {
     authenticate: async (obj, args, { authService }) => {
       const {
-        credentials: { username, password },
+        credentials: { email, password },
       } = await argsSchema.validate(args, {
         stripUnknown: true,
       });
 
-      const userDataLogin = await auth(username, password);
+      const user = await User.query().findOne({ email });
 
-      if (!userDataLogin) {
-        throw new UserInputError('Invalid username or password');
-      }
-      const {
-        email,
-        stsTokenManager: { accessToken, expirationTime },
-      } = userDataLogin;
-
-      const userData = await findData('user', 'username', '==', email);
-      const user = userData[0];
       if (!user) {
-        throw new UserInputError('Username doesn’t exist ');
+        throw new UserInputError('Invalid email or password');
       }
 
+      const match = await bcrypt.compare(password, user.password);
+
+      if (!match) {
+        throw new UserInputError('Invalid email or password');
+      }
+      if (!user.state) {
+        throw new UserInputError('You have been banned ');
+      }
       return {
         user,
-        // accessToken,
-        // expiresAt: { seconds: expirationTime },
         ...authService.createAccessToken(user.id),
       };
     },

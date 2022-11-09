@@ -30,7 +30,6 @@ class AuthService {
 
   async getUser() {
     const id = await this.getUserId();
-
     if (!id) {
       return null;
     }
@@ -53,7 +52,6 @@ class AuthService {
 
   createAccessToken(userId) {
     const expiresAt = new Date(Date.now() + ACCESS_TOKEN_EXPIRATION_TIME);
-
     return {
       accessToken: signJwt(
         { userId },
@@ -62,7 +60,7 @@ class AuthService {
           subject,
         },
       ),
-      expiresAt: { seconds: expiresAt },
+      expiresAt: expiresAt,
     };
   }
 }

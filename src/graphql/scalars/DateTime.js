@@ -16,31 +16,29 @@ const config = {
     'compliant with the `date-time` format outlined in section 5.6 of ' +
     'the RFC 3339 profile of the ISO 8601 standard for representation ' +
     'of dates and times using the Gregorian calendar.',
-  serialize(date) {
-    const seconds = date.toDate();
-
-    if (isValidDateTime(seconds)) {
-      return new Date(seconds).toISOString();
+  serialize(value) {
+    if (isValidDateTime(value)) {
+      return new Date(value).toISOString();
     }
 
     throw new TypeError(
-      `DateTime can not be serialized from ${JSON.stringify(seconds)}`,
+      `DateTime can not be serialized from ${JSON.stringify(value)}`,
     );
   },
-  parseValue(seconds) {
-    if (isValidDateTime(seconds)) {
-      return new Date(seconds);
+  parseValue(value) {
+    if (isValidDateTime(value)) {
+      return new Date(value);
     }
 
     throw new TypeError(
-      `DateTime can not be parsed from ${JSON.stringify(seconds)}`,
+      `DateTime can not be parsed from ${JSON.stringify(value)}`,
     );
   },
   parseLiteral(ast) {
     if (ast.kind !== Kind.STRING) {
       throw new TypeError(
         `DateTime cannot represent non string type ${String(
-          ast.seconds != null ? ast.seconds : null,
+          ast.value != null ? ast.value : null,
         )}`,
       );
     }

@@ -4,13 +4,10 @@ import logger from './utils/logger';
 import { API_PORT, APOLLO_PORT } from './config';
 import createApolloServer from './apolloServer';
 import app from './app';
-import { getTest } from './firebase';
 
 const startServer = async () => {
   const httpServer = http.createServer(app);
-  getTest();
   const apolloServer = createApolloServer();
-
   await apolloServer.listen({ port: APOLLO_PORT });
 
   httpServer.on('request', app.callback());

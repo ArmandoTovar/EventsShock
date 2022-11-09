@@ -1,9 +1,10 @@
 import { gql } from 'apollo-server';
 import * as yup from 'yup';
-import { findAll } from '../../firebase';
+import User from '../../models/User';
+
 export const typeDefs = gql`
   extend type Query {
-    users: [User!]
+    users(first: Int, after: String): UserConnection!
   }
 `;
 
@@ -15,8 +16,12 @@ const argsSchema = yup.object({
 export const resolvers = {
   Query: {
     users: async (obj, args) => {
-      const data = await findAll('user');
-      return data;
+      const { first, after } = await argsSchema.validate(args);
+      return User.query().cursorPaginate({
+        orderBy: [{ column: 'createdAt', order: 'desc' }, 'id'],
+        first,
+        after,
+      });
     },
   },
 };
